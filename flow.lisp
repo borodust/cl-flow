@@ -39,7 +39,7 @@
 
 
 (defmacro -> (invariant-n-opts lambda-list &body body)
-  (destructuring-bind (invariant &rest opts) (ensure-list invariant-n-opts)
+  (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
     (with-gensyms (dispatcher body-fn args result-callback rest-arg)
       (multiple-value-bind (new-lambda-list new-rest-p) (insert-rest-arg lambda-list rest-arg)
         `(lambda (,dispatcher ,result-callback &rest ,args)
@@ -103,9 +103,12 @@
          (dispatch-list-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,args)))))
 
 
-(defmacro define-flow (name (&rest lambda-list) &body body)
-  `(defun ,name ,lambda-list
-     (>> ,@body)))
+(defmacro define-flow (name-n-opts (&rest lambda-list) initial-form &body rest-flow)
+  (destructuring-bind (name &rest opts) (ensure-list name-n-opts)
+    `(defun ,name ()
+         (>> (-> ,opts ,lambda-list
+               ,initial-form)
+             ,@rest-flow))))
 
 
 (defmacro ~> (&body body)
