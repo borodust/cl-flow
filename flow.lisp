@@ -1,7 +1,7 @@
 (in-package :cl-flow)
 
 
-(defgeneric dispatch (dispatcher task &key invariant &allow-other-keys))
+(defgeneric dispatch (dispatcher task &key &allow-other-keys))
 
 
 (defmacro *> (invariant-n-opts condition-var &body body)
@@ -103,12 +103,9 @@
          (dispatch-list-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,args)))))
 
 
-(defmacro define-flow (name-n-opts (&rest lambda-list) initial-form &body rest-flow)
-  (destructuring-bind (name &rest opts) (ensure-list name-n-opts)
-    `(defun ,name ()
-         (>> (-> ,opts ,lambda-list
-               ,initial-form)
-             ,@rest-flow))))
+(defmacro define-flow (name &body flow-body)
+  `(defun ,name ()
+     (>> ,@flow-body)))
 
 
 (defmacro ~> (&body body)
