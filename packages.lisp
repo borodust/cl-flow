@@ -7,5 +7,6 @@
            #:->
            #:>>
            #:~>
+           #:->>
            #:define-flow
            #:run-flow))

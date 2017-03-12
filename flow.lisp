@@ -53,6 +53,25 @@
                                         #',body-fn ,(when (not (null lambda-list)) args))))))))
 
 
+(defun inject-flow (flow-gen dispatcher result-callback args)
+  (flet ((return-error (e)
+           (funcall result-callback (list e) t)))
+    (handler-bind ((simple-error #'return-error))
+      (apply (apply flow-gen args) dispatcher result-callback args))))
+
+
+(defmacro ->> (lambda-list &body body)
+  (with-gensyms (dispatcher body-fn args result-callback rest-arg)
+    (multiple-value-bind (new-lambda-list new-rest-p) (insert-rest-arg lambda-list rest-arg)
+      `(lambda (,dispatcher ,result-callback &rest ,args)
+         (declare (ignorable ,args))
+         (flet ((,body-fn ,new-lambda-list
+                  ,@(when new-rest-p
+                      `((declare (ignore ,rest-arg))))
+                  ,@body))
+           (inject-flow #',body-fn ,dispatcher ,result-callback ,args))))))
+
+
 (defun dispatch-list-flow (list dispatcher result-callback args)
   (labels ((dispatch-list (fn-list args)
              (flet ((dispatch-next (result error-p)

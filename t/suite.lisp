@@ -35,7 +35,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (test complex-flow
   (let ((result (list)))
     (flet ((put (v)
@@ -73,3 +72,34 @@
              (-> :g ()
                (mt:open-latch latch))))))
     (is (equal '(0 (2 3 14 4 5 6 -1) ((3) (4) (5)) 6) (nreverse result)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun flow-gen (p)
+  (if p
+      (>> (-> :g () 1))
+      (-> :g () 2)))
+
+(test dynamic-flow
+  (let ((result (list)))
+    (flet ((put (v)
+             (push v result)))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (-> :g ()
+               (put 0)
+               t)
+             (->> (v) (flow-gen v))
+             (-> :g (v)
+               (put v)
+               nil)
+             (->> (v) (flow-gen v))
+             (-> :g (v)
+               (put v))
+             (-> :g ()
+               (put 3)
+               (mt:open-latch latch))))))
+    (is (equal '(0 1 2 3) (nreverse result)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
