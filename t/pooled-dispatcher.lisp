@@ -19,4 +19,4 @@
 
 
 (defun run-it (flow)
-  (run-flow *dispatcher* flow))
+  (run *dispatcher* flow))

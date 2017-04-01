@@ -38,7 +38,7 @@
                 t))))
 
 
-(defmacro -> (invariant-n-opts lambda-list &body body)
+(defmacro atomically (invariant-n-opts lambda-list &body body)
   (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
     (with-gensyms (dispatcher body-fn args result-callback rest-arg)
       (multiple-value-bind (new-lambda-list new-rest-p) (insert-rest-arg lambda-list rest-arg)
@@ -53,6 +53,11 @@
                                         #',body-fn ,(when (not (null lambda-list)) args))))))))
 
 
+(defmacro -> (invariant-n-opts lambda-list &body body)
+  `(atomically ,invariant-n-opts ,lambda-list
+     ,@body))
+
+
 (defun inject-flow (flow-gen dispatcher result-callback args)
   (flet ((return-error (e)
            (funcall result-callback (list e) t)))
@@ -60,7 +65,7 @@
       (apply (apply flow-gen args) dispatcher result-callback args))))
 
 
-(defmacro ->> (lambda-list &body body)
+(defmacro dynamically (lambda-list &body body)
   (with-gensyms (dispatcher body-fn args result-callback rest-arg)
     (multiple-value-bind (new-lambda-list new-rest-p) (insert-rest-arg lambda-list rest-arg)
       `(lambda (,dispatcher ,result-callback &rest ,args)
@@ -70,6 +75,11 @@
                       `((declare (ignore ,rest-arg))))
                   ,@body))
            (inject-flow #',body-fn ,dispatcher ,result-callback ,args))))))
+
+
+(defmacro ->> (lambda-list &body body)
+  `(dynamically ,lambda-list
+     ,@body))
 
 
 (defun dispatch-list-flow (list dispatcher result-callback args)
@@ -114,7 +124,7 @@
       (resolve flow-result))))
 
 
-(defmacro >> (&body flow)
+(defmacro serially (&body flow)
   (with-gensyms (dispatcher result-callback args flow-tree)
     `(lambda (,dispatcher ,result-callback &rest ,args)
        (declare (type (or null (function (list t) *)) ,result-callback))
@@ -122,12 +132,16 @@
          (dispatch-list-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,args)))))
 
 
+(defmacro >> (&body flow)
+  `(serially ,@flow))
+
+
 (defmacro define-flow (name &body flow-body)
   `(defun ,name ()
      (>> ,@flow-body)))
 
 
-(defmacro ~> (&body body)
+(defmacro concurrently (&body body)
   (with-gensyms (dispatcher args result-callback flow)
     `(lambda (,dispatcher ,result-callback &rest ,args)
        (declare (type (or (function (list t) *) null) ,result-callback))
@@ -135,5 +149,9 @@
          (dispatch-parallel-flow ,flow ,dispatcher (or ,result-callback #'nop) ,args)))))
 
 
-(defun run-flow (dispatcher flow &optional result-callback)
-  (funcall flow dispatcher result-callback))
+(defmacro ~> (&body body)
+  `(concurrently ,@body))
+
+
+(defun run (dispatcher flow)
+  (dispatch-list-flow (ensure-list flow) dispatcher #'nop nil))
