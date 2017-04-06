@@ -46,6 +46,7 @@
                1)
              (~> (-> :g (a)
                    (+ 1 a))
+                 (list nil)
                  (-> :g (a)
                    (+ a 2))
                  (>> (-> :g (b)
@@ -58,9 +59,9 @@
                          (+ a 4))
                        (-> :g (a)
                          (values (+ a 5) -1))))
-             (-> :g (a b c l)
+             (-> :g (a n b c l)
                (destructuring-bind ((d) (e) (f g)) l
-                 (put (list (car a) (car b) (car c) d e f g))))
+                 (put (list (car a) (car n) (car b) (car c) d e f g))))
              (list (-> :g () 3)
                    (parallel-flow)
                    (-> :g (r)
@@ -72,7 +73,7 @@
                  (put a)))
              (-> :g ()
                (mt:open-latch latch))))))
-    (5am:is (equal '(0 (2 3 14 4 5 6 -1) ((3) (4) (5)) 6) (nreverse result)))))
+    (5am:is (equal '(0 (2 nil 3 14 4 5 6 -1) ((3) (4) (5)) 6) (nreverse result)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -102,5 +103,21 @@
                (put 3)
                (mt:open-latch latch))))))
     (5am:is (equal '(0 1 2 3) (nreverse result)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test concurrent-null-flow
+  (let ((result (list)))
+    (flet ((put (v)
+             (push v result)))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (~> nil
+                 (list nil))
+             (-> :g (a b)
+               (put (car a))
+               (put (car b))
+               (mt:open-latch latch))))))
+    (5am:is (equal '(nil nil) (nreverse result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
