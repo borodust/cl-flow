@@ -82,7 +82,7 @@
      ,@body))
 
 
-(defun dispatch-list-flow (list dispatcher result-callback args)
+(defun dispatch-serial-flow (list dispatcher result-callback args)
   (labels ((dispatch-list (fn-list args)
              (flet ((dispatch-next (result error-p)
                       (if error-p
@@ -92,7 +92,7 @@
                    (funcall result-callback args nil)
                    (let ((flow-element (first fn-list)))
                      (if (listp flow-element)
-                         (dispatch-list-flow flow-element dispatcher #'dispatch-next args)
+                         (dispatch-serial-flow flow-element dispatcher #'dispatch-next args)
                          (apply flow-element dispatcher #'dispatch-next args)))))))
     (dispatch-list list args)))
 
@@ -131,7 +131,7 @@
     `(lambda (,dispatcher ,result-callback &rest ,args)
        (declare (type (or null (function (list t) *)) ,result-callback))
        (let ((,flow-tree (list ,@flow)))
-         (dispatch-list-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,args)))))
+         (dispatch-serial-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,args)))))
 
 
 (defmacro >> (&body flow)
@@ -156,4 +156,4 @@
 
 
 (defun run (dispatcher flow)
-  (dispatch-list-flow (ensure-list flow) dispatcher #'nop nil))
+  (dispatch-serial-flow (ensure-list flow) dispatcher #'nop nil))
