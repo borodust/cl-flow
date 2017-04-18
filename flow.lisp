@@ -1,7 +1,7 @@
 (in-package :cl-flow)
 
 
-(defgeneric dispatch (dispatcher task &key &allow-other-keys))
+(defgeneric dispatch (dispatcher task invariant &key &allow-other-keys))
 
 
 (defmacro *> (invariant-n-opts condition-var &body body)
@@ -21,7 +21,7 @@
              (handler-bind ((simple-error #'return-error))
                (funcall result-callback
                         (multiple-value-list (apply fn args)) nil))))
-    (apply #'dispatch dispatcher #'dispatched :invariant invariant opts)))
+    (apply #'dispatch dispatcher #'dispatched invariant opts)))
 
 
 (defun insert-rest-arg (lambda-list name)

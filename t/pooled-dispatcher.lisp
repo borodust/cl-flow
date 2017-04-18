@@ -13,7 +13,7 @@
 (defvar *dispatcher* (make-instance 'pooled-dispatcher))
 
 
-(defmethod dispatch ((this pooled-dispatcher) fn &key)
+(defmethod dispatch ((this pooled-dispatcher) fn invariant &key)
   (with-slots (pool) this
     (mt:push-to-pool pool fn)))
 
