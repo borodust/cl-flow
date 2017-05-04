@@ -1,9 +1,6 @@
 (in-package :cl-flow)
 
 
-(defgeneric dispatch (dispatcher task invariant &key &allow-other-keys))
-
-
 (defmacro *> (invariant-n-opts condition-var &body body)
   (declare (ignore invariant-n-opts condition-var body))
   (error "*> cannot be used outside of flow operator"))
@@ -21,7 +18,7 @@
              (handler-bind ((simple-error #'return-error))
                (funcall result-callback
                         (multiple-value-list (apply fn args)) nil))))
-    (apply #'dispatch dispatcher #'dispatched invariant opts)))
+    (apply dispatcher #'dispatched invariant opts)))
 
 
 (defun insert-rest-arg (lambda-list name)
@@ -156,4 +153,6 @@
 
 
 (defun run (dispatcher flow)
+  "Dispatcher must be a function with lambda-list congruent to (task invariant &key
+&allow-other-keys)"
   (dispatch-serial-flow (ensure-list flow) dispatcher #'nop nil))

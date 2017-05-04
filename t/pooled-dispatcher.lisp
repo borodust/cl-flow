@@ -13,10 +13,11 @@
 (defvar *dispatcher* (make-instance 'pooled-dispatcher))
 
 
-(defmethod dispatch ((this pooled-dispatcher) fn invariant &key)
-  (with-slots (pool) this
+(defun dispatch (fn invariant &key)
+  (declare (ignore invariant))
+  (with-slots (pool) *dispatcher*
     (mt:push-to-pool pool fn)))
 
 
 (defun run-it (flow)
-  (run *dispatcher* flow))
+  (run #'dispatch flow))

@@ -11,11 +11,11 @@ threads.
 
 `->` marks atomic block of code that can be dispatched concurrently.
 
-`->>` denotes block that generates new flow dynamically during parent flow execution. In other words, injects new dynamically created flow into current one.
+`->>` denotes gblock that generates new flow dynamically during parent flow execution. In other words, injects new dynamically created flow into current one.
 
 Keywords in this examples denote invariants, so `->` block marked with the same invariant
-shouldn't be executed concurrently. But this solely must be enforced by dispatcher that
-implements `dispatch` generic function and passed into `run-flow` function.
+shouldn't be executed concurrently. But this must be enforced by dispatching function passed
+into `run-flow`.
 
 Code is fully asynchronous, no blocking required (see Memory Model note below). Results of
 previously executed block (denoted by `->`) "flow" into next code block and bound as arguments
