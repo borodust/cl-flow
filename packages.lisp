@@ -12,5 +12,4 @@
            #:serially
            #:concurrently
            #:dynamically
-           #:define-flow
            #:run))

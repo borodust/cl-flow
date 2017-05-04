@@ -135,11 +135,6 @@
   `(serially ,@flow))
 
 
-(defmacro define-flow (name &body flow-body)
-  `(defun ,name ()
-     (>> ,@flow-body)))
-
-
 (defmacro concurrently (&body body)
   (with-gensyms (dispatcher args result-callback flow)
     `(lambda (,dispatcher ,result-callback &rest ,args)
