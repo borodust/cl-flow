@@ -8,8 +8,12 @@
            #:>>
            #:~>
            #:->>
+           #:%>
            #:atomically
            #:serially
            #:concurrently
            #:dynamically
+           #:asynchronously
+           #:continue-flow
+           #:interrupt-flow
            #:run))

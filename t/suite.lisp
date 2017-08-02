@@ -5,13 +5,13 @@
 (5am:in-suite :cl-flow-suite)
 
 
-(define-flow serial-flow
+(defun serial-flow ()
   (>> (loop repeat 5
          collecting (-> :p (a)
                       (1+ a)))))
 
 
-(define-flow parallel-flow
+(defun parallel-flow ()
   (~> (loop for i from 0 below 3
          collecting (let ((i i))
                       (-> :p (a)
@@ -119,5 +119,31 @@
                (put (car b))
                (mt:open-latch latch))))))
     (5am:is (equal '(nil nil) (nreverse result)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test asynchronous-flow
+  (let ((result (list)))
+    (flet ((put (v)
+             (push v result)))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (-> :g ()
+               (put 1)
+               2)
+             (asynchronously (val)
+               (put 2)
+               (flet ((%continue ()
+                        (continue-flow (+ 1 val))))
+                 (dispatch #'%continue nil)))
+             (%> (val)
+               (put val)
+               (flet ((%continue ()
+                        (continue-flow (+ 2 val))))
+                 (dispatch #'%continue nil)))
+             (-> :g (val)
+               (put val)
+               (mt:open-latch latch))))))
+    (5am:is (equal '(1 2 3 5) (nreverse result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

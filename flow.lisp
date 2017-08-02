@@ -79,6 +79,29 @@
      ,@body))
 
 
+(defmacro asynchronously (lambda-list &body body)
+  (with-gensyms (dispatcher body-fn args result-callback rest-arg continue-args condi)
+    (multiple-value-bind (new-lambda-list new-rest-p) (insert-rest-arg lambda-list rest-arg)
+      `(lambda (,dispatcher ,result-callback &rest ,args)
+         (declare (ignorable ,args)
+                  (ignore ,dispatcher))
+         (labels ((continue-flow (&rest ,continue-args)
+                    (funcall ,result-callback ,continue-args nil))
+                  (interrupt-flow (,condi)
+                    (funcall ,result-callback (list ,condi) t))
+                  (,body-fn ,new-lambda-list
+                    ,@(when new-rest-p
+                        `((declare (ignore ,rest-arg))))
+                    ,@body))
+           (handler-bind ((simple-error #'interrupt-flow))
+             (apply #',body-fn ,args)))))))
+
+
+(defmacro %> (lambda-list &body body)
+  `(asynchronously ,lambda-list
+     ,@body))
+
+
 (defun dispatch-serial-flow (list dispatcher result-callback args)
   (labels ((dispatch-list (fn-list args)
              (flet ((dispatch-next (result error-p)
