@@ -26,12 +26,25 @@
       (run-it
        (>> (~> (flow:atomically :tag-0 () "Hello")
                (-> :tag-1 () ", concurrent"))
-           (-> :tag-2 (a b)
-             (concatenate 'string (car a) (car b) " World!"))
+           (-> :tag-2 ((a b))
+             (concatenate 'string a b " World!"))
            (-> :tag-3 (text)
              (setf result text)
              (mt:open-latch latch)))))
     (5am:is (equal "Hello, concurrent World!" result))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test basic-flow
+  (let ((result ""))
+    (mt:wait-with-latch (latch)
+      (run-it
+       (>> (-> :p () 1)
+           (-> :p (a) (+ a 1))
+           (-> :p (v)
+             (setf result v)
+             (mt:open-latch latch)))))
+    (5am:is (equal 2 result))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -59,9 +72,8 @@
                          (+ a 4))
                        (-> :g (a)
                          (values (+ a 5) -1))))
-             (-> :g (a n b c l)
-               (destructuring-bind ((d) (e) (f g)) l
-                 (put (list (car a) (car n) (car b) (car c) d e f g))))
+             (-> :g ((a (n) b c (d e f)))
+               (put (list a n b c d e f)))
              (list (-> :g () 3)
                    (parallel-flow)
                    (-> :g (r)
@@ -73,7 +85,7 @@
                  (put a)))
              (-> :g ()
                (mt:open-latch latch))))))
-    (5am:is (equal '(0 (2 nil 3 14 4 5 6 -1) ((3) (4) (5)) 6) (nreverse result)))))
+    (5am:is (equal '(0 (2 nil 3 14 4 5 6) ((3 4 5)) 6) (nreverse result)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -114,9 +126,9 @@
         (run-it
          (>> (~> nil
                  (list nil))
-             (-> :g (a b)
-               (put (car a))
-               (put (car b))
+             (-> :g ((a (b)))
+               (put a)
+               (put b)
                (mt:open-latch latch))))))
     (5am:is (equal '(nil nil) (nreverse result)))))
 
