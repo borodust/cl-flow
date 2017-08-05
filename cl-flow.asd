@@ -12,9 +12,10 @@
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
-  :depends-on (alexandria bordeaux-threads)
+  :depends-on (alexandria)
   :serial t
   :components ((:file "packages")
+               (:file "atomic")
                (:file "flow")))
 
 

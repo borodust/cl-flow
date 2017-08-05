@@ -108,8 +108,7 @@
 (defun dispatch-parallel-flow (list dispatcher result-callback arg)
   (if (null list)
       (funcall result-callback nil nil)
-      (let ((n 0)
-            (lock (bt:make-lock "~>"))
+      (let ((counter)
             (flow-result (copy-tree list)))
         (labels ((count-elements (root)
                    (if (and root (listp root))
@@ -121,7 +120,7 @@
                               (error "Error during parralel flow dispatch: ~A"
                                      result))
                             (setf (car callback-list) result)
-                            (when (= (bt:with-lock-held (lock) (decf n)) 0)
+                            (when (= (decrement-counter counter) 1)
                               (funcall result-callback flow-result nil))))
                      (let ((element (car callback-list)))
                        (cond
@@ -130,7 +129,7 @@
                          (t (funcall element dispatcher #'%cons-result-callback arg))))
                      (when-let ((rest-elements (cdr callback-list)))
                        (resolve rest-elements)))))
-          (setf n (count-elements list))
+          (setf counter (make-atomic-counter (count-elements list)))
           (resolve flow-result)))))
 
 
