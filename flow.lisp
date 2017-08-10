@@ -1,13 +1,14 @@
 (in-package :cl-flow)
 
 
-(defmacro *> (invariant-n-opts condition-var &body body)
-  (declare (ignore invariant-n-opts condition-var body))
-  (error "*> cannot be used outside of flow operator"))
-
-
 (defun nop (result error-p)
   (declare (ignore result error-p)))
+
+
+(defun skip-flow-block (e)
+  "Invokes 'skip-flow-block restart skipping current block and returning nil as its result"
+  (declare (ignore e))
+  (invoke-restart 'skip-flow-block))
 
 
 (defun expand-body-function-def (name lambda-list body)
@@ -17,16 +18,21 @@
     `(,name
       (,arg)
       (declare (ignorable ,arg))
-      ,(if destructured-p
-           `(destructuring-bind ,destructuring-ll ,arg
-              ,@body)
-           `(,@(if lambda-list
-                   `(let ((,(car lambda-list) ,arg)))
-                   `(progn))
-               ,@body)))))
+      (restart-case
+          ,(if destructured-p
+               `(destructuring-bind ,destructuring-ll ,arg
+                  ,@body)
+               `(,@(if lambda-list
+                       `(let ((,(car lambda-list) ,arg)))
+                       `(progn))
+                   ,@body))
+        (use-value (value) value)
+        (skip-flow-block () nil)))))
+
 
 
 (defmacro atomically (invariant-n-opts lambda-list &body body)
+  "Encloses atomic flow block of code that could be dispatched concurrently"
   (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
     (with-gensyms (dispatcher arg result-callback return-error dispatched e body-fn)
       `(lambda (,dispatcher ,result-callback ,arg)
@@ -41,11 +47,14 @@
 
 
 (defmacro -> (invariant-n-opts lambda-list &body body)
+  "See flow:atomically"
   `(atomically ,invariant-n-opts ,lambda-list
      ,@body))
 
 
 (defmacro dynamically (lambda-list &body body)
+  "Generates new flow dynamically during parent flow execution. In other words, injects new
+dynamically created flow into a current one."
   (with-gensyms (dispatcher body-fn arg result-callback return-error e)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg))
@@ -57,21 +66,26 @@
 
 
 (defmacro ->> (lambda-list &body body)
+  "See flow:dynamically"
   `(dynamically ,lambda-list
      ,@body))
 
 
-(defun continue-flow (result)
-  (declare (ignore result))
+(defun continue-flow (value)
+  "Invokes next flow block with provided value as an argument"
+  (declare (ignore value))
   (error "function can be called inside asynchonous block only"))
 
 
 (defun interrupt-flow (condition)
+  "Interrupts flow with provided condition"
   (declare (ignore condition))
   (error "function can be called inside asynchonous block only"))
 
 
 (defmacro asynchronously (lambda-list &body body)
+  "Splits current flow allowing manually managing its execution via #'continue-flow and
+#'interrupt-flow functions"
   (with-gensyms (dispatcher body-fn arg result-callback continue-arg condi)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg)
@@ -86,6 +100,7 @@
 
 
 (defmacro %> (lambda-list &body body)
+  "See flow:asynchronously"
   `(asynchronously ,lambda-list
      ,@body))
 
@@ -97,7 +112,7 @@
                  (let ((flow-element (first fn-list)))
                    (flet ((dispatch-next (result error-p)
                             (if error-p
-                                (error "Error during serial flow dispatch: ~A" result)
+                                (error result)
                                 (dispatch-list (rest fn-list) result))))
                      (if (listp flow-element)
                          (dispatch-serial-flow flow-element dispatcher #'dispatch-next arg)
@@ -117,8 +132,7 @@
                  (resolve (callback-list)
                    (flet ((%cons-result-callback (result error-p)
                             (when error-p
-                              (error "Error during parralel flow dispatch: ~A"
-                                     result))
+                              (error result))
                             (setf (car callback-list) result)
                             (when (= (decrement-counter counter) 1)
                               (funcall result-callback flow-result nil))))
@@ -134,6 +148,8 @@
 
 
 (defmacro serially (&body flow)
+  "Executes child elements serially (but possibly in different threads) returning a value of the
+last atomic block or flow"
   (with-gensyms (dispatcher result-callback arg flow-tree)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (type (or null (function (list t) *)) ,result-callback))
@@ -142,10 +158,13 @@
 
 
 (defmacro >> (&body flow)
+  "See flow:serially"
   `(serially ,@flow))
 
 
 (defmacro concurrently (&body body)
+  "Executes child elements in parallel, returning a list of results for child blocks or flows in
+the same order they were specified"
   (with-gensyms (dispatcher arg result-callback flow)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (type (or (function (list t) *) null) ,result-callback))
@@ -154,6 +173,7 @@
 
 
 (defmacro ~> (&body body)
+  "See flow:concurrently"
   `(concurrently ,@body))
 
 

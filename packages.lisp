@@ -16,4 +16,5 @@
            #:asynchronously
            #:continue-flow
            #:interrupt-flow
-           #:run))
+           #:run
+           #:skip-flow-block))

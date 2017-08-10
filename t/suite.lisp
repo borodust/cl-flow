@@ -159,3 +159,23 @@
     (5am:is (equal '(1 2 3 5) (nreverse result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test restarted-flow
+  (let ((result (list)))
+    (flet ((put (v)
+             (push v result)))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (-> :g ()
+               (error 'recoverable-condition))
+             (-> :g (value)
+               (put value)
+               (error 'skipping-condition))
+             (-> :g (value)
+               (unless value
+                 (put 0)))
+             (-> :g ()
+               (mt:open-latch latch))))))
+    (5am:is (equal '(-1 0) (nreverse result)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

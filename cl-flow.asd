@@ -8,7 +8,7 @@
 
 (defsystem cl-flow
   :description "Data-flow driven concurrency model for Common Lisp"
-  :version "0.0.1"
+  :version "1.0.0"
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
@@ -21,7 +21,7 @@
 
 (defsystem cl-flow/tests
   :description "Test suite for cl-flow"
-  :version "0.0.1"
+  :version "1.0.0"
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
