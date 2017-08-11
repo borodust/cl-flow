@@ -25,7 +25,7 @@
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
-  :depends-on (alexandria cl-flow fiveam cl-muth)
+  :depends-on (alexandria cl-flow fiveam cl-muth simple-flow-dispatcher)
   :pathname "t/"
   :serial t
   :components ((:file "packages")
