@@ -181,3 +181,43 @@
     (5am:is (equal '(-1 0) (nreverse result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test non-concurrent-flow
+  (let ((value 0))
+    (flet ((increment ()
+             (let ((v value))
+               (sleep 0.05)
+               (setf value (1+ v)))))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (~> (-> :one ()
+                   (increment))
+                 (-> :one ()
+                   (increment))
+                 (-> :one ()
+                   (increment)))
+             (-> :p ()
+               (mt:open-latch latch))))))
+    (5am:is (= value 3))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test fully-concurrent-flow
+  (let ((value 0))
+    (flet ((increment ()
+             (let ((v value))
+               (sleep 0.05)
+               (setf value (1+ v)))))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (~> (-> :one ()
+                   (increment))
+                 (-> :two ()
+                   (increment))
+                 (-> :three ()
+                   (increment)))
+             (-> :p ()
+               (mt:open-latch latch))))))
+    (5am:is (= value 1))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
