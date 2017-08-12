@@ -7,7 +7,7 @@
 should be an accessor form for a struct slot holding an integer."
   #+lispworks `(sys:atomic-decf ,place)
   #+ccl `(ccl::atomic-decf ,place)
-  #+sbcl `(sb-ext:atomic-decf ,place)
+  #+sbcl `(1- (sb-ext:atomic-decf ,place))
   #-(or lispworks ccl sbcl) (error "ATOMIC-DECF unimplemented"))
 
 

@@ -134,7 +134,7 @@ dynamically created flow into a current one."
                             (when error-p
                               (error result))
                             (setf (car callback-list) result)
-                            (when (= (decrement-counter counter) 1)
+                            (when (= (decrement-counter counter) 0)
                               (funcall result-callback flow-result nil))))
                      (let ((element (car callback-list)))
                        (cond
