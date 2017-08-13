@@ -15,6 +15,8 @@
   (let* ((destructuring-ll (car lambda-list))
          (destructured-p (and destructuring-ll (listp destructuring-ll)))
          (arg (gensym)))
+    (unless (or destructured-p (null (cdr lambda-list)))
+      (error "Atomic block can accept single argument only, but got ~A" lambda-list))
     `(,name
       (,arg)
       (declare (ignorable ,arg))
