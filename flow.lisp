@@ -73,7 +73,7 @@ dynamically created flow into a current one."
      ,@body))
 
 
-(defun continue-flow (value)
+(defun continue-flow (&optional value)
   "Invokes next flow block with provided value as an argument"
   (declare (ignore value))
   (error "function can be called inside asynchonous block only"))
@@ -92,7 +92,7 @@ dynamically created flow into a current one."
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg)
                 (ignore ,dispatcher))
-       (labels ((continue-flow (,continue-arg)
+       (labels ((continue-flow (&optional ,continue-arg)
                   (funcall ,result-callback ,continue-arg nil))
                 (interrupt-flow (,condi)
                   (funcall ,result-callback ,condi t))
