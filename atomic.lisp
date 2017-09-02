@@ -12,7 +12,8 @@ should be an accessor form for a struct slot holding an integer."
 
 
 (defstruct (atomic-counter
-             (:constructor %make-atomic-counter (value)))
+             (:constructor %make-atomic-counter (value))
+             #+ccl (:type vector))
   (value 0 :type (unsigned-byte 64)))
 
 
