@@ -198,7 +198,7 @@
                    (increment)))
              (-> :p ()
                (mt:open-latch latch))))))
-    (5am:is (= value 3))))
+    (5am:is (= 3 value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -206,7 +206,7 @@
   (let ((value 0))
     (flet ((increment ()
              (let ((v value))
-               (sleep 0.05)
+               (sleep 0.1)
                (setf value (1+ v)))))
       (mt:wait-with-latch (latch)
         (run-it
@@ -218,6 +218,6 @@
                    (increment)))
              (-> :p ()
                (mt:open-latch latch))))))
-    (5am:is (= value 1))))
+    (5am:is (= 1 value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
