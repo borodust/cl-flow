@@ -5,12 +5,6 @@
   (declare (ignore result error-p)))
 
 
-(defun skip-flow-block (e)
-  "Invokes 'skip-flow-block restart skipping current block and returning nil as its result"
-  (declare (ignore e))
-  (invoke-restart 'skip-flow-block))
-
-
 (defun expand-body-function-def (name lambda-list body)
   (let* ((destructuring-ll (car lambda-list))
          (destructured-p (and destructuring-ll (listp destructuring-ll)))
@@ -28,8 +22,12 @@
                        `(let ((,(car lambda-list) ,arg)))
                        `(progn))
                    ,@body))
-        (use-value (value) value)
-        (skip-flow-block () nil)))))
+        (continue ()
+          :report "Skip flow block returning nil"
+          nil)
+        (use-value (value)
+          :report "Skip flow block returning provided value"
+          value)))))
 
 
 

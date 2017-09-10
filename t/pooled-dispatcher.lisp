@@ -7,7 +7,7 @@
 
 
 (defun invoke (fn)
-  (handler-bind ((skipping-condition #'skip-flow-block)
+  (handler-bind ((skipping-condition (lambda (e) (continue e)))
                  (recoverable-condition (lambda (e)
                                           (declare (ignore e))
                                           (use-value -1))))
