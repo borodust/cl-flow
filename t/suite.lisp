@@ -111,6 +111,7 @@
              (flow:dynamically (v) (flow-gen v))
              (-> :g (v)
                (put v))
+             (flow:dynamically () nil) ;; allow null result
              (-> :g ()
                (put 3)
                (mt:open-latch latch))))))

@@ -55,14 +55,16 @@
 (defmacro dynamically (lambda-list &body body)
   "Generates new flow dynamically during parent flow execution. In other words, injects new
 dynamically created flow into a current one."
-  (with-gensyms (dispatcher body-fn arg result-callback return-error e)
+  (with-gensyms (dispatcher body-fn arg result-callback return-error e flow)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg))
        (flet (,(expand-body-function-def body-fn lambda-list body)
               (,return-error (,e)
                 (funcall ,result-callback ,e t)))
          (handler-bind ((simple-error #',return-error))
-           (funcall (funcall #',body-fn ,arg) ,dispatcher ,result-callback ,arg))))))
+           (if-let ((,flow (funcall #',body-fn ,arg)))
+             (funcall ,flow ,dispatcher ,result-callback ,arg)
+             (funcall ,result-callback nil nil)))))))
 
 
 (defmacro ->> (lambda-list &body body)
