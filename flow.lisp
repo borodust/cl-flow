@@ -5,12 +5,22 @@
   (declare (ignore result error-p)))
 
 
+(defun invoke-with-restarts (fu arg)
+  (restart-case
+      (funcall fu arg)
+    (continue ()
+      :report "Skip flow block returning nil"
+      nil)
+    (use-value (value)
+      :report "Skip flow block returning provided value"
+      value)))
+
 (defun expand-body-function-def (name lambda-list body)
   (let* ((destructuring-ll (car lambda-list))
          (destructured-p (and destructuring-ll (listp destructuring-ll)))
          (arg (gensym)))
     (unless (or destructured-p (null (cdr lambda-list)))
-      (error "Atomic block can accept single argument only, but got ~A" lambda-list))
+      (error "Flow block can accept single argument only, but got ~A" lambda-list))
     `(,name
       (,arg)
       (declare (ignorable ,arg))
@@ -30,20 +40,43 @@
           value)))))
 
 
+(defmacro with-body-fu ((fu-name lambda-list fu-body) &body body)
+  (let* ((destructuring-ll (car lambda-list))
+         (destructured-p (and destructuring-ll (listp destructuring-ll)))
+         (arg (gensym)))
+    (unless (or destructured-p (null (cdr lambda-list)))
+      (error "Flow block can accept single argument only, but got ~A" lambda-list))
+    `(flet ((,fu-name (,arg)
+              (declare (ignorable ,arg))
+              (,@(cond
+                   (destructured-p
+                    `(destructuring-bind ,destructuring-ll ,arg))
+                   ((not (null lambda-list))
+                    `(let ((,(car lambda-list) ,arg))))
+                   (t '(progn)))
+               ,@fu-body)))
+       ,@body)))
+
+
+(defun invoke-atomically (body-fu arg result-callback dispatcher invariant &rest opts)
+  (labels ((return-error (e)
+             (funcall result-callback e t))
+           (dispatched ()
+             (handler-bind ((simple-error #'return-error))
+               (funcall result-callback (invoke-with-restarts body-fu arg) nil))))
+    (apply dispatcher #'dispatched invariant opts)))
+
 
 (defmacro atomically (invariant-n-opts lambda-list &body body)
   "Encloses atomic flow block of code that could be dispatched concurrently"
   (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
-    (with-gensyms (dispatcher arg result-callback return-error dispatched e body-fn)
+    (with-gensyms (dispatcher arg result-callback body-fu)
       `(lambda (,dispatcher ,result-callback ,arg)
          (declare (ignorable ,arg))
-         (labels (,(expand-body-function-def body-fn lambda-list body)
-                  (,return-error (,e)
-                    (funcall ,result-callback ,e t))
-                  (,dispatched ()
-                    (handler-bind ((simple-error #',return-error))
-                      (funcall ,result-callback (funcall #',body-fn ,arg) nil))))
-           (funcall ,dispatcher #',dispatched ,invariant ,@opts))))))
+         (with-body-fu (,body-fu ,lambda-list ,body)
+           (invoke-atomically #',body-fu ,arg
+                              ,result-callback
+                              ,dispatcher ,invariant ,@opts))))))
 
 
 (defmacro -> (invariant-n-opts lambda-list &body body)
@@ -52,19 +85,23 @@
      ,@body))
 
 
+(defun invoke-dynamically (body-fu arg result-callback dispatcher)
+  (flet ((return-error (e)
+           (funcall result-callback e t)))
+    (handler-bind ((simple-error #'return-error))
+      (if-let ((flow (invoke-with-restarts body-fu arg)))
+        (funcall flow dispatcher result-callback arg)
+        (funcall result-callback nil nil)))))
+
+
 (defmacro dynamically (lambda-list &body body)
   "Generates new flow dynamically during parent flow execution. In other words, injects new
 dynamically created flow into a current one."
-  (with-gensyms (dispatcher body-fn arg result-callback return-error e flow)
+  (with-gensyms (dispatcher body-fu arg result-callback)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg))
-       (flet (,(expand-body-function-def body-fn lambda-list body)
-              (,return-error (,e)
-                (funcall ,result-callback ,e t)))
-         (handler-bind ((simple-error #',return-error))
-           (if-let ((,flow (funcall #',body-fn ,arg)))
-             (funcall ,flow ,dispatcher ,result-callback ,arg)
-             (funcall ,result-callback nil nil)))))))
+       (with-body-fu (,body-fu ,lambda-list ,body)
+         (invoke-dynamically #',body-fu ,arg ,result-callback ,dispatcher)))))
 
 
 (defmacro ->> (lambda-list &body body)
@@ -76,29 +113,30 @@ dynamically created flow into a current one."
 (defun continue-flow (&optional value)
   "Invokes next flow block with provided value as an argument"
   (declare (ignore value))
-  (error "function can be called inside asynchonous block only"))
+  (error "Function can be called inside asynchonous block only"))
 
 
 (defun interrupt-flow (condition)
   "Interrupts flow with provided condition"
   (declare (ignore condition))
-  (error "function can be called inside asynchonous block only"))
+  (error "Function can be called inside asynchonous block only"))
 
 
 (defmacro asynchronously (lambda-list &body body)
   "Splits current flow allowing manually managing its execution via #'continue-flow and
 #'interrupt-flow functions"
-  (with-gensyms (dispatcher body-fn arg result-callback continue-arg condi)
+  (with-gensyms (dispatcher body-fu arg result-callback continue-arg condi)
     `(lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg)
                 (ignore ,dispatcher))
-       (labels ((continue-flow (&optional ,continue-arg)
-                  (funcall ,result-callback ,continue-arg nil))
-                (interrupt-flow (,condi)
-                  (funcall ,result-callback ,condi t))
-                ,(expand-body-function-def body-fn lambda-list body))
+       (with-body-fu (,body-fu ,lambda-list
+                               ((flet ((flow:continue-flow (&optional ,continue-arg)
+                                         (funcall ,result-callback ,continue-arg nil))
+                                       (flow:interrupt-flow (,condi)
+                                         (funcall ,result-callback ,condi t)))
+                                  ,@body)))
          (handler-bind ((simple-error #'interrupt-flow))
-           (funcall #',body-fn ,arg))))))
+           (invoke-with-restarts #',body-fu ,arg))))))
 
 
 (defmacro %> (lambda-list &body body)
