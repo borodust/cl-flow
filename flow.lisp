@@ -15,30 +15,6 @@
       :report "Skip flow block returning provided value"
       value)))
 
-(defun expand-body-function-def (name lambda-list body)
-  (let* ((destructuring-ll (car lambda-list))
-         (destructured-p (and destructuring-ll (listp destructuring-ll)))
-         (arg (gensym)))
-    (unless (or destructured-p (null (cdr lambda-list)))
-      (error "Flow block can accept single argument only, but got ~A" lambda-list))
-    `(,name
-      (,arg)
-      (declare (ignorable ,arg))
-      (restart-case
-          ,(if destructured-p
-               `(destructuring-bind ,destructuring-ll ,arg
-                  ,@body)
-               `(,@(if lambda-list
-                       `(let ((,(car lambda-list) ,arg)))
-                       `(progn))
-                   ,@body))
-        (continue ()
-          :report "Skip flow block returning nil"
-          nil)
-        (use-value (value)
-          :report "Skip flow block returning provided value"
-          value)))))
-
 
 (defmacro with-body-fu ((fu-name lambda-list fu-body) &body body)
   (let* ((destructuring-ll (car lambda-list))
