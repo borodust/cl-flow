@@ -187,7 +187,7 @@ dynamically created flow into a current one."
           (resolve flow-result)))))
 
 
-(defmacro serially (&body flow)
+(defmacro serially (&rest flow)
   "Executes child elements serially (but possibly in different threads) returning a value of the
 last atomic block or flow"
   (with-gensyms (dispatcher result-callback arg flow-tree)
@@ -197,12 +197,12 @@ last atomic block or flow"
          (dispatch-serial-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,arg)))))
 
 
-(defmacro >> (&body flow)
+(defmacro >> (&rest flow)
   "See flow:serially"
   `(serially ,@flow))
 
 
-(defmacro concurrently (&body body)
+(defmacro concurrently (&rest body)
   "Executes child elements in parallel, returning a list of results for child blocks or flows in
 the same order they were specified"
   (with-gensyms (dispatcher arg result-callback flow)
@@ -212,7 +212,7 @@ the same order they were specified"
          (dispatch-parallel-flow ,flow ,dispatcher (or ,result-callback #'nop) ,arg)))))
 
 
-(defmacro ~> (&body body)
+(defmacro ~> (&rest body)
   "See flow:concurrently"
   `(concurrently ,@body))
 
