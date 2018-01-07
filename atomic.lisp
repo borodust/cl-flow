@@ -17,10 +17,11 @@ should be an accessor form for a struct slot holding an integer."
   (value 0 :type (unsigned-byte 64)))
 
 
-(defun make-atomic-counter (&optional (value 0))
+(defun* (make-atomic-counter -> atomic-counter)
+    (&optional ((value (unsigned-byte 64)) 0))
   (%make-atomic-counter value))
 
 
-(defun decrement-counter (counter)
+(defun* (decrement-counter -> (unsigned-byte 64)) (counter)
   "Returns previous value"
   (%atomic-decf (atomic-counter-value counter)))

@@ -3,7 +3,7 @@
 
 (defpackage :cl-flow
   (:nicknames :flow)
-  (:use :cl :alexandria)
+  (:use :cl :alexandria :defstar)
   (:export #:->
            #:>>
            #:~>

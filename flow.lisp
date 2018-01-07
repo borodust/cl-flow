@@ -2,10 +2,20 @@
 
 
 (defun nop (result error-p)
-  (declare (ignore result error-p)))
+  (declare (ignore result error-p)
+           #.+optimize-form+))
 
 
-(defun invoke-with-restarts (fu arg)
+(defmacro flow-lambda ((dispatcher result-callback arg) &body body)
+  `(lambda* ((,dispatcher (function (function &rest *)))
+             (,result-callback (or null (function (* boolean))))
+             (,arg t))
+     (declare #.+optimize-form+)
+     ,@body))
+
+
+(defun* invoke-with-restarts ((fu (function (*) *)) (arg t))
+  (declare #.+optimize-form+)
   (restart-case
       (funcall fu arg)
     (continue ()
@@ -34,7 +44,13 @@
        ,@body)))
 
 
-(defun invoke-atomically (body-fu arg result-callback dispatcher invariant &rest opts)
+(defun* invoke-atomically ((body-fu (function (*) *))
+                           (arg t)
+                           (result-callback (function (* boolean)))
+                           (dispatcher (function (* &rest *)))
+                           (invariant t)
+                           &rest (opts t))
+  (declare #.+optimize-form+)
   (labels ((return-error (e)
              (funcall result-callback e t))
            (dispatched ()
@@ -47,7 +63,7 @@
   "Encloses atomic flow block of code that could be dispatched concurrently"
   (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
     (with-gensyms (dispatcher arg result-callback body-fu)
-      `(lambda (,dispatcher ,result-callback ,arg)
+      `(flow-lambda (,dispatcher ,result-callback ,arg)
          (declare (ignorable ,arg))
          (with-body-fu (,body-fu ,lambda-list ,body)
            (invoke-atomically #',body-fu ,arg
@@ -61,12 +77,17 @@
      ,@body))
 
 
-(defun invoke-dynamically (body-fu arg result-callback dispatcher)
+(defun* invoke-dynamically ((body-fu (function (*) *))
+                            (arg t)
+                            (result-callback (function (* boolean)))
+                            (dispatcher (function (* &rest *))))
+  (declare #.+optimize-form+)
   (flet ((return-error (e)
            (funcall result-callback e t)))
     (handler-bind ((simple-error #'return-error))
       (if-let ((flow (invoke-with-restarts body-fu arg)))
-        (funcall flow dispatcher result-callback arg)
+        (funcall (the (function (function function *)) flow)
+                 dispatcher result-callback arg)
         (funcall result-callback nil nil)))))
 
 
@@ -74,7 +95,7 @@
   "Generates new flow dynamically during parent flow execution. In other words, injects new
 dynamically created flow into a current one."
   (with-gensyms (dispatcher body-fu arg result-callback)
-    `(lambda (,dispatcher ,result-callback ,arg)
+    `(flow-lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg))
        (with-body-fu (,body-fu ,lambda-list ,body)
          (invoke-dynamically #',body-fu ,arg ,result-callback ,dispatcher)))))
@@ -102,7 +123,7 @@ dynamically created flow into a current one."
   "Splits current flow allowing manually managing its execution via #'continue-flow and
 #'interrupt-flow functions"
   (with-gensyms (dispatcher body-fu arg result-callback continue-arg condi)
-    `(lambda (,dispatcher ,result-callback ,arg)
+    `(flow-lambda (,dispatcher ,result-callback ,arg)
        (declare (ignorable ,arg)
                 (ignore ,dispatcher))
        (with-body-fu (,body-fu ,lambda-list
@@ -121,7 +142,11 @@ dynamically created flow into a current one."
      ,@body))
 
 
-(defun dispatch-serial-flow (list dispatcher result-callback arg)
+(defun* dispatch-serial-flow ((list list)
+                              (dispatcher (function (* &rest *)))
+                              (result-callback (function (* boolean)))
+                              (arg t))
+  (declare #.+optimize-form+)
   (labels ((dispatch-list (fn-list arg)
              (if (null fn-list)
                  (funcall result-callback arg nil)
@@ -132,35 +157,40 @@ dynamically created flow into a current one."
                                 (dispatch-list (rest fn-list) result))))
                      (if (listp flow-element)
                          (dispatch-serial-flow flow-element dispatcher #'dispatch-next arg)
-                         (funcall flow-element dispatcher #'dispatch-next arg)))))))
+                         (funcall (the (function (function function *)) flow-element)
+                                  dispatcher #'dispatch-next arg)))))))
     (dispatch-list list arg)))
 
 
-(defun dispatch-parallel-flow (list dispatcher result-callback arg)
+(defun* dispatch-parallel-flow ((list list)
+                                (dispatcher (function (* &rest *)))
+                                (result-callback (function (* boolean)))
+                                (arg t))
+  (declare #.+optimize-form+)
   (if (null list)
       (funcall result-callback nil nil)
-      (let ((counter)
-            (flow-result (copy-tree list)))
-        (labels ((count-elements (root)
-                   (if (and root (listp root))
-                       (loop for node in root summing (count-elements node))
-                      1))
-                 (resolve (callback-list)
-                   (flet ((%cons-result-callback (result error-p)
-                            (when error-p
-                              (error result))
-                            (setf (car callback-list) result)
-                            (when (= (decrement-counter counter) 0)
-                              (funcall result-callback flow-result nil))))
-                     (let ((element (car callback-list)))
-                       (cond
-                         ((null element) (%cons-result-callback nil nil))
-                         ((listp element) (resolve element))
-                         (t (funcall element dispatcher #'%cons-result-callback arg))))
-                     (when-let ((rest-elements (cdr callback-list)))
-                       (resolve rest-elements)))))
-          (setf counter (make-atomic-counter (count-elements list)))
-          (resolve flow-result)))))
+      (labels* (((count-elements -> fixnum) (root)
+                 (if (and root (listp root))
+                     (loop for node in root summing (count-elements node) fixnum)
+                     1)))
+        (*let ((counter atomic-counter (make-atomic-counter (count-elements list)))
+               (flow-result list (copy-tree list)))
+          (labels ((resolve (callback-list)
+                     (flet ((%cons-result-callback (result error-p)
+                              (when error-p
+                                (error result))
+                              (setf (car callback-list) result)
+                              (when (= (decrement-counter counter) 0)
+                                (funcall result-callback flow-result nil))))
+                       (let ((element (car callback-list)))
+                         (cond
+                           ((null element) (%cons-result-callback nil nil))
+                           ((listp element) (resolve element))
+                           (t (funcall (the (function (function function *)) element)
+                                       dispatcher #'%cons-result-callback arg))))
+                       (when-let ((rest-elements (cdr callback-list)))
+                         (resolve rest-elements)))))
+            (resolve flow-result))))))
 
 
 (defmacro serially (&rest flow)
@@ -168,7 +198,7 @@ dynamically created flow into a current one."
 last atomic block or flow"
   (with-gensyms (dispatcher result-callback arg flow-tree)
     `(let ((,flow-tree (list ,@flow)))
-       (lambda (,dispatcher ,result-callback ,arg)
+       (flow-lambda (,dispatcher ,result-callback ,arg)
          (declare (type (or null (function (list t) *)) ,result-callback))
          (dispatch-serial-flow ,flow-tree ,dispatcher (or ,result-callback #'nop) ,arg)))))
 
@@ -183,8 +213,7 @@ last atomic block or flow"
 the same order they were specified"
   (with-gensyms (dispatcher arg result-callback flow)
     `(let ((,flow (list ,@body)))
-       (lambda (,dispatcher ,result-callback ,arg)
-         (declare (type (or (function (list t) *) null) ,result-callback))
+       (flow-lambda (,dispatcher ,result-callback ,arg)
          (dispatch-parallel-flow ,flow ,dispatcher (or ,result-callback #'nop) ,arg)))))
 
 
@@ -193,7 +222,8 @@ the same order they were specified"
   `(concurrently ,@body))
 
 
-(defun run (dispatcher flow)
+(defun* run ((dispatcher (function (function &rest *))) (flow (or list function)))
   "Dispatcher must be a function with lambda-list congruent to (task invariant &key
 &allow-other-keys)"
+  (declare #.+optimize-form+)
   (dispatch-serial-flow (ensure-list flow) dispatcher #'nop nil))
