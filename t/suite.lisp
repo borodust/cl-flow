@@ -7,15 +7,17 @@
 
 (defun serial-flow ()
   (>> (loop repeat 5
-         collecting (-> :p (a)
-                      (1+ a)))))
+            collecting (-> :p (a)
+                         (declare (type fixnum a))
+                         (the fixnum (1+ a))))))
 
 
 (defun parallel-flow ()
   (~> (loop for i from 0 below 3
          collecting (let ((i i))
                       (-> :p (a)
-                        (+ a i))))))
+                        (declare (type fixnum a))
+                        (the fixnum (+ a i)))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
