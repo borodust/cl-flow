@@ -1,7 +1,4 @@
-(cl:in-package :cl-user)
-
-
-(defpackage :cl-flow
+(cl:defpackage :cl-flow
   (:nicknames :flow)
   (:use :cl :alexandria :defstar)
   (:export #:->

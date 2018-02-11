@@ -1,12 +1,4 @@
-(cl:in-package :cl-user)
-
-(defpackage :cl-flow.def
-  (:use :cl :asdf))
-
-(in-package :cl-flow.def)
-
-
-(defsystem cl-flow
+(asdf:defsystem cl-flow
   :description "Data-flow driven concurrency model for Common Lisp"
   :version "1.0.0"
   :author "Pavel Korolev"
@@ -20,7 +12,7 @@
                (:file "flow")))
 
 
-(defsystem cl-flow/tests
+(asdf:defsystem cl-flow/tests
   :description "Test suite for cl-flow"
   :version "1.0.0"
   :author "Pavel Korolev"
