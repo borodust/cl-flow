@@ -224,3 +224,24 @@
     (5am:is (= 1 value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test dispatcher-args
+  (let ((value 0))
+    (flet ((increment ()
+             (let ((v value))
+               (sleep 0.05)
+               (setf value (1+ v))))
+           (one () :one))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>> (~> (-> (one) :ignore-invariant t ()
+                   (increment))
+                 (-> :one :ignore-invariant t ()
+                   (increment))
+                 (-> :one :ignore-invariant t ()
+                   (increment)))
+             (-> :p ()
+               (mt:open-latch latch))))))
+    (5am:is (= 1 value))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

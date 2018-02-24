@@ -59,9 +59,17 @@
     (apply dispatcher #'dispatched invariant opts)))
 
 
-(defmacro atomically (invariant-n-opts lambda-list &body body)
+(defun parse-atomic-block-args (args)
+  (loop for (opt . body) on args by #'cddr
+        until (listp opt)
+        collecting opt into opts
+        collecting (first body) into opts
+        finally (return (list opts opt body))))
+
+
+(defmacro atomically (invariant &body args)
   "Encloses atomic flow block of code that could be dispatched concurrently"
-  (destructuring-bind (&optional invariant &rest opts) (ensure-list invariant-n-opts)
+  (destructuring-bind (opts lambda-list body) (parse-atomic-block-args args)
     (with-gensyms (dispatcher arg result-callback body-fu)
       `(flow-lambda (,dispatcher ,result-callback ,arg)
          (declare (ignorable ,arg))
@@ -71,10 +79,9 @@
                               ,dispatcher ,invariant ,@opts))))))
 
 
-(defmacro -> (invariant-n-opts lambda-list &body body)
+(defmacro -> (invariant &body args)
   "See flow:atomically"
-  `(atomically ,invariant-n-opts ,lambda-list
-     ,@body))
+  `(atomically ,invariant ,@args))
 
 
 (defun* invoke-dynamically ((body-fu (function (*) *))
