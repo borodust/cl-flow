@@ -1,4 +1,4 @@
-(in-package :cl-flow.tests)
+(cl:in-package :cl-flow.tests)
 
 
 (define-condition skipping-condition (simple-error) ())

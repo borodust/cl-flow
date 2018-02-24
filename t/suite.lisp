@@ -1,4 +1,4 @@
-(in-package :cl-flow.tests)
+(cl:in-package :cl-flow.tests)
 
 (5am:def-suite :cl-flow-suite)
 
