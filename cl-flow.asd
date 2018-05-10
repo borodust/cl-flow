@@ -4,11 +4,10 @@
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
-  :depends-on (alexandria defstar)
+  :depends-on (alexandria defstar cl-muth)
   :serial t
   :components ((:file "packages")
                (:file "utils")
-               (:file "atomic")
                (:file "flow")))
 
 
