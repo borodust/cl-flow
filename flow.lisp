@@ -180,7 +180,7 @@ dynamically created flow into a current one."
                  (if (and root (listp root))
                      (loop for node in root summing (count-elements node) fixnum)
                      1)))
-        (*let ((counter atomic-counter (mt:make-atomic-counter (count-elements list)))
+        (*let ((counter t (mt:make-atomic-counter (count-elements list)))
                (flow-result list (copy-tree list)))
           (labels ((resolve (callback-list)
                      (flet ((%cons-result-callback (result error-p)
