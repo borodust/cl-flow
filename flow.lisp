@@ -92,10 +92,11 @@
   (flet ((return-error (e)
            (funcall result-callback e t)))
     (handler-bind ((simple-error #'return-error))
-      (if-let ((flow (invoke-with-restarts body-fu arg)))
-        (funcall (the (function (function function *)) flow)
-                 dispatcher result-callback arg)
-        (funcall result-callback nil nil)))))
+      (let ((flow-element (invoke-with-restarts body-fu arg)))
+        (if (listp flow-element)
+            (dispatch-serial-flow flow-element dispatcher result-callback arg)
+            (funcall (the (function (function function *)) flow-element)
+                     dispatcher result-callback arg))))))
 
 
 (defmacro dynamically (lambda-list &body body)
@@ -187,7 +188,7 @@ dynamically created flow into a current one."
                               (when error-p
                                 (error result))
                               (setf (car callback-list) result)
-                              (when (= (mt:decrement-atomic-counter counter) 0)
+                              (when (= (the fixnum (mt:decrement-atomic-counter counter)) 0)
                                 (funcall result-callback flow-result nil))))
                        (let ((element (car callback-list)))
                          (cond

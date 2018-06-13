@@ -95,7 +95,7 @@
 (defun flow-gen (p)
   (if p
       (>> (-> :g () 1))
-      (-> :g () 2)))
+      (list (-> :g () 2) (-> :g (v) v))))
 
 (5am:test dynamic-flow
   (let ((result (list)))
