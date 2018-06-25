@@ -4,7 +4,7 @@
   :author "Pavel Korolev"
   :mailto "dev@borodust.org"
   :license "MIT"
-  :depends-on (alexandria defstar cl-muth)
+  :depends-on (alexandria cl-muth)
   :serial t
   :components ((:file "packages")
                (:file "utils")

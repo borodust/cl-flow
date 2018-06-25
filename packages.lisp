@@ -1,6 +1,6 @@
 (cl:defpackage :cl-flow
   (:nicknames :flow)
-  (:use :cl :alexandria :defstar)
+  (:use :cl :alexandria)
   (:export #:->
            #:>>
            #:~>
