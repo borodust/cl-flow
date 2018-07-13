@@ -18,14 +18,19 @@
 (defun invoke-with-restarts (fu arg)
   (declare (type (function (*) *) fu)
            #.+optimize-form+)
-  (restart-case
-      (funcall fu arg)
-    (continue ()
-      :report "Skip flow block returning nil"
-      nil)
-    (use-value (value)
-      :report "Skip flow block returning provided value"
-      value)))
+  (let (result)
+    (tagbody restart-block begin
+       (restart-case
+           (setf result (funcall fu arg))
+         (restart ()
+           :report "Restart flow block"
+           (go begin))
+         (continue ()
+           :report "Skip flow block returning nil")
+         (use-value (value)
+           :report "Skip flow block returning provided value"
+           (setf result value))))
+    result))
 
 
 (defmacro with-body-fu ((fu-name lambda-list fu-body) &body body)
