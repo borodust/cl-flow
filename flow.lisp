@@ -22,15 +22,32 @@
     (tagbody restart-block begin
        (restart-case
            (setf result (funcall fu arg))
-         (restart ()
-           :report "Restart flow block"
+         (rerun-flow-block ()
+           :report "Rerun current flow block"
            (go begin))
-         (continue ()
+         (skip-flow-block ()
            :report "Skip flow block returning nil")
-         (use-value (value)
+         (use-flow-block-value (value)
            :report "Skip flow block returning provided value"
            (setf result value))))
     result))
+
+
+(defun try-restart (name c &optional arg)
+  (when-let ((restart (find-restart name c)))
+    (invoke-restart restart arg)))
+
+
+(defun rerun-flow-block (&optional condition)
+  (try-restart 'rerun-flow-block condition))
+
+
+(defun skip-flow-block (&optional condition)
+  (try-restart 'skip-flow-block condition))
+
+
+(defun use-flow-block-value (value &optional condition)
+  (try-restart 'use-flow-block-value condition value))
 
 
 (defmacro with-body-fu ((fu-name lambda-list fu-body) &body body)
