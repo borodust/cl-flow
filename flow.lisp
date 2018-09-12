@@ -33,9 +33,11 @@
     result))
 
 
-(defun try-restart (name c &optional arg)
+(defun try-restart (name c &optional (arg nil provided-p))
   (when-let ((restart (find-restart name c)))
-    (invoke-restart restart arg)))
+    (if provided-p
+        (invoke-restart restart arg)
+        (invoke-restart restart))))
 
 
 (defun rerun-flow-block (&optional condition)
