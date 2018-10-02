@@ -163,6 +163,8 @@ dynamically created flow into a current one."
                                          (funcall ,result-callback ,continue-arg nil))
                                        (flow:interrupt-flow (,condi)
                                          (funcall ,result-callback ,condi t)))
+                                  (declare (ignorable (function continue-flow)
+                                                      (function interrupt-flow)))
                                   ,@body)))
          (handler-bind ((simple-error #'interrupt-flow))
            (invoke-with-restarts #',body-fu ,arg))))))
