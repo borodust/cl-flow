@@ -181,19 +181,20 @@ dynamically created flow into a current one."
            (type (function (* &rest *)) dispatcher)
            (type (function (* boolean)) result-callback)
            #.+optimize-form+)
-  (labels ((dispatch-list (fn-list arg)
-             (if (null fn-list)
-                 (funcall result-callback arg nil)
-                 (let ((flow-element (first fn-list)))
-                   (flet ((dispatch-next (result error-p)
-                            (if error-p
-                                (error result)
-                                (dispatch-list (rest fn-list) result))))
-                     (if (listp flow-element)
-                         (dispatch-serial-flow flow-element dispatcher #'dispatch-next arg)
-                         (funcall (the (function (function function *)) flow-element)
-                                  dispatcher #'dispatch-next arg)))))))
-    (dispatch-list list arg)))
+  (if (null list)
+      (funcall result-callback arg nil)
+      (let ((flow-element (first list)))
+        (flet ((dispatch-next (result error-p)
+                 (if error-p
+                     (error result)
+                     (dispatch-serial-flow (rest list)
+                                           dispatcher
+                                           result-callback
+                                           result))))
+          (if (listp flow-element)
+              (dispatch-serial-flow flow-element dispatcher #'dispatch-next arg)
+              (funcall (the (function (function function *)) flow-element)
+                       dispatcher #'dispatch-next arg))))))
 
 
 (defun dispatch-parallel-flow (list dispatcher result-callback arg)
