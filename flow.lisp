@@ -1,6 +1,10 @@
 (cl:in-package :cl-flow)
 
 
+(declaim (special *flow-value*))
+
+(defvar *recursive-flow* nil)
+
 (defun nop (result error-p)
   (declare (ignore result error-p)
            #.+optimize-form+))
@@ -10,9 +14,9 @@
   `(lambda (,dispatcher ,result-callback ,arg)
      (declare (type (function (function &rest *)) ,dispatcher)
               (type (or null (function (* boolean))) ,result-callback)
+              (ignorable ,arg)
               #.+optimize-form+)
      ,@body))
-
 
 
 (defun invoke-with-restarts (fu arg)
@@ -136,6 +140,67 @@ dynamically created flow into a current one."
 (defmacro ->> (lambda-list &body body)
   "See flow:dynamically"
   `(dynamically ,lambda-list
+     ,@body))
+
+
+
+(defun %invoke-repeatedly (dispatcher test-fu flow arg result-callback)
+  (declare (type (function () boolean) test-fu)
+           (type (function (* boolean)) result-callback)
+           (type (function (* &rest *)) dispatcher)
+           #.+optimize-form+)
+  (let ((arg arg))
+    (tagbody start
+       (labels ((return-error (e)
+                  (funcall result-callback e t))
+                (next-iteration (result error-p)
+                  (when error-p
+                    (error result))
+                  (if (let ((*flow-value* result))
+                        (funcall test-fu))
+                      (if *recursive-flow*
+                          (progn
+                            (setf arg result)
+                            (go start))
+                          (%invoke-repeatedly dispatcher
+                                              test-fu
+                                              flow
+                                              result
+                                              result-callback))
+                      (funcall result-callback result error-p))))
+         (handler-bind ((simple-error #'return-error))
+           (let ((*recursive-flow* flow))
+             (dispatch-serial-flow flow dispatcher #'next-iteration arg)))))))
+
+
+(defun invoke-repeatedly (dispatcher test-fu flow arg result-callback)
+  (declare (type (function () boolean) test-fu)
+           (type (function (* boolean)) result-callback)
+           (type (function (* &rest *)) dispatcher)
+           #.+optimize-form+)
+  (if (let ((*flow-value* arg))
+        (funcall test-fu))
+      (%invoke-repeatedly dispatcher test-fu flow arg result-callback)
+      (funcall result-callback arg nil)))
+
+
+(defmacro repeatedly (end-test-form &body flow)
+  ""
+  (with-gensyms (dispatcher test-fu arg result-callback flow-tree)
+    `(flow-lambda (,dispatcher ,result-callback ,arg)
+       (flet ((,test-fu ()
+                ,end-test-form))
+         (let ((,flow-tree (list ,@flow)))
+           (invoke-repeatedly ,dispatcher
+                              #',test-fu
+                              ,flow-tree
+                              ,arg
+                              ,result-callback))))))
+
+
+(defmacro o> (condition &body body)
+  "See flow:repeatedly"
+  `(repeatedly ,condition
      ,@body))
 
 

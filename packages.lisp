@@ -6,11 +6,14 @@
            #:~>
            #:->>
            #:%>
+           #:o>
 
            #:atomically
            #:serially
            #:concurrently
            #:dynamically
+           #:repeatedly
+           #:*flow-value*
            #:asynchronously
            #:continue-flow
            #:interrupt-flow

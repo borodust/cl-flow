@@ -245,3 +245,23 @@
     (5am:is (= 1 value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test repeated-flow
+  (let* ((iterations 100000)
+         (test-calls-left (1+ iterations))
+         result)
+    (mt:wait-with-latch (latch)
+      (run-it
+       (>> (-> nil () 0)
+           (o> (progn
+                 (decf test-calls-left)
+                 (< *flow-value* iterations))
+             (-> nil (value)
+               (1+ value)))
+           (-> nil (value)
+             (setf result value)
+             (mt:open-latch latch)))))
+    (5am:is (= iterations result))
+    (5am:is (= test-calls-left 0))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
