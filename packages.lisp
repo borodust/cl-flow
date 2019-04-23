@@ -21,4 +21,5 @@
 
            #:rerun-flow-block
            #:skip-flow-block
-           #:use-flow-block-value))
+           #:use-flow-block-value
+           #:inject-flow))

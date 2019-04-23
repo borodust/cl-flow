@@ -19,7 +19,7 @@
      ,@body))
 
 
-(defun invoke-with-restarts (fu arg)
+(defun invoke-with-restarts (fu arg result-callback dispatcher)
   (declare (type (function (*) *) fu)
            #.+optimize-form+)
   (let (result)
@@ -33,27 +33,33 @@
            :report "Skip flow block returning nil")
          (use-flow-block-value (value)
            :report "Skip flow block returning provided value"
-           (setf result value))))
+           (setf result value))
+         (inject-flow (flow)
+           :report "Inject flow to run instead of current block"
+           (invoke-dynamically (constantly flow) arg result-callback dispatcher))))
     result))
 
 
-(defun try-restart (name c &optional (arg nil provided-p))
-  (when-let ((restart (find-restart name c)))
-    (if provided-p
-        (invoke-restart restart arg)
-        (invoke-restart restart))))
+(defun try-restart (restart-name &optional (arg nil provided-p))
+  (if provided-p
+      (invoke-restart restart-name arg)
+      (invoke-restart restart-name)))
 
 
-(defun rerun-flow-block (&optional condition)
-  (try-restart 'rerun-flow-block condition))
+(defun rerun-flow-block ()
+  (try-restart 'rerun-flow-block))
 
 
-(defun skip-flow-block (&optional condition)
-  (try-restart 'skip-flow-block condition))
+(defun skip-flow-block ()
+  (try-restart 'skip-flow-block))
 
 
-(defun use-flow-block-value (value &optional condition)
-  (try-restart 'use-flow-block-value condition value))
+(defun inject-flow (flow)
+  (try-restart 'inject-flow flow))
+
+
+(defun use-flow-block-value (value)
+  (try-restart 'use-flow-block-value value))
 
 
 (defmacro with-body-fu ((fu-name lambda-list fu-body) &body body)
@@ -83,7 +89,12 @@
              (funcall result-callback e t))
            (dispatched ()
              (handler-bind ((simple-error #'return-error))
-               (funcall result-callback (invoke-with-restarts body-fu arg) nil))))
+               (funcall result-callback
+                        (invoke-with-restarts body-fu
+                                              arg
+                                              result-callback
+                                              dispatcher)
+                        nil))))
     (apply dispatcher #'dispatched invariant opts)))
 
 
@@ -120,7 +131,7 @@
   (flet ((return-error (e)
            (funcall result-callback e t)))
     (handler-bind ((simple-error #'return-error))
-      (let ((flow-element (invoke-with-restarts body-fu arg)))
+      (let ((flow-element (invoke-with-restarts body-fu arg result-callback dispatcher)))
         (if (listp flow-element)
             (dispatch-serial-flow flow-element dispatcher result-callback arg)
             (funcall (the (function (function function *)) flow-element)
@@ -221,8 +232,7 @@ dynamically created flow into a current one."
 #'interrupt-flow functions"
   (with-gensyms (dispatcher body-fu arg result-callback continue-arg condi)
     `(flow-lambda (,dispatcher ,result-callback ,arg)
-       (declare (ignorable ,arg)
-                (ignore ,dispatcher))
+       (declare (ignorable ,arg))
        (with-body-fu (,body-fu ,lambda-list
                                ((flet ((flow:continue-flow (&optional ,continue-arg)
                                          (funcall ,result-callback ,continue-arg nil))
@@ -232,7 +242,7 @@ dynamically created flow into a current one."
                                                       (function interrupt-flow)))
                                   ,@body)))
          (handler-bind ((simple-error #'interrupt-flow))
-           (invoke-with-restarts #',body-fu ,arg))))))
+           (invoke-with-restarts #',body-fu ,arg ,result-callback ,dispatcher))))))
 
 
 (defmacro %> (lambda-list &body body)
