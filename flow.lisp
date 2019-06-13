@@ -196,7 +196,9 @@ dynamically created flow into a current one."
 
 
 (defmacro repeatedly (end-test-form &body flow)
-  ""
+  "Short-circuit the flow specified inside the block and executes it repeatedly
+in loop until condition returns NIL. Result from the last iteration will be
+passed to the next block"
   (with-gensyms (dispatcher test-fu arg result-callback flow-tree)
     `(flow-lambda (,dispatcher ,result-callback ,arg)
        (flet ((,test-fu ()
