@@ -111,7 +111,6 @@
   (destructuring-bind (opts lambda-list body) (parse-atomic-block-args args)
     (with-gensyms (dispatcher arg result-callback body-fu)
       `(flow-lambda (,dispatcher ,result-callback ,arg)
-         (declare (ignorable ,arg))
          (with-body-fu (,body-fu ,lambda-list ,body)
            (invoke-atomically #',body-fu ,arg
                               ,result-callback
@@ -143,7 +142,6 @@
 dynamically created flow into a current one."
   (with-gensyms (dispatcher body-fu arg result-callback)
     `(flow-lambda (,dispatcher ,result-callback ,arg)
-       (declare (ignorable ,arg))
        (with-body-fu (,body-fu ,lambda-list ,body)
          (invoke-dynamically #',body-fu ,arg ,result-callback ,dispatcher)))))
 
@@ -234,7 +232,6 @@ will be passed to the next block"
 #'interrupt-flow functions"
   (with-gensyms (dispatcher body-fu arg result-callback continue-arg condi)
     `(flow-lambda (,dispatcher ,result-callback ,arg)
-       (declare (ignorable ,arg))
        (with-body-fu (,body-fu ,lambda-list
                                ((flet ((flow:continue-flow (&optional ,continue-arg)
                                          (funcall ,result-callback ,continue-arg nil))
