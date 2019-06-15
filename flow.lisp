@@ -195,14 +195,14 @@ dynamically created flow into a current one."
       (funcall result-callback arg nil)))
 
 
-(defmacro repeatedly (end-test-form &body flow)
+(defmacro repeatedly (live-test-form &body flow)
   "Short-circuit the flow specified inside the block and executes it repeatedly
-in loop until condition returns NIL. Result from the last iteration will be
-passed to the next block"
+in loop until LIVE-TEST-FORM evaluates to NIL. Result from the last iteration
+will be passed to the next block"
   (with-gensyms (dispatcher test-fu arg result-callback flow-tree)
     `(flow-lambda (,dispatcher ,result-callback ,arg)
        (flet ((,test-fu ()
-                ,end-test-form))
+                ,live-test-form))
          (let ((,flow-tree (list ,@flow)))
            (invoke-repeatedly ,dispatcher
                               #',test-fu
