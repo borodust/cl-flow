@@ -6,9 +6,17 @@
   :license "MIT"
   :depends-on (alexandria cl-muth)
   :serial t
+  :pathname "src/"
   :components ((:file "packages")
                (:file "utils")
-               (:file "flow")))
+               (:file "context")
+               (:file "flow")
+               (:file "atomically")
+               (:file "serially")
+               (:file "concurrently")
+               (:file "dynamically")
+               (:file "asynchronously")
+               (:file "repeatedly")))
 
 
 (asdf:defsystem cl-flow/tests
