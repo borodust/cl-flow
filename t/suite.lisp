@@ -50,48 +50,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(5am:test complex-flow
-  (let ((result (list)))
-    (flet ((put (v)
-             (push v result)))
-      (mt:wait-with-latch (latch)
-        (run-it
-         (>> (-> :g ()
-               (put 0)
-               1)
-             (~> (-> :g (a)
-                   (+ 1 a))
-                 (list nil)
-                 (-> :g (a)
-                   (+ a 2))
-                 (>> (-> :g (b)
-                       (+ b 6))
-                     (-> :g (b)
-                       (+ b 7)))
-                 (list (-> :g (a)
-                         (+ a 3))
-                       (-> :g (a)
-                         (+ a 4))
-                       (-> :g (a)
-                         (values (+ a 5) -1))))
-             (-> :g ((a (n) b c (d e f)))
-               (put (list a n b c d e f)))
-             (list (-> :g () 3)
-                   (parallel-flow)
-                   (-> :g (r)
-                     (put r)))
-             (flow:serially
-               (-> :g () 1)
-               (serial-flow)
-               (-> :g (a)
-                 (put a)))
-             (-> :g ()
-               (mt:open-latch latch))))))
-    (5am:is (equal '(0 (2 nil 3 14 4 5 6) ((3 4 5)) 6) (nreverse result)))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defun flow-gen (p)
   (if p
       (>> (-> :g () 1))
@@ -252,16 +210,59 @@
          result)
     (mt:wait-with-latch (latch)
       (run-it
-       (>> (-> nil () 0)
-           (o> (progn
-                 (decf test-calls-left)
-                 (< *flow-value* iterations))
-             (-> nil (value)
-               (1+ value)))
+       (>>
+         (-> nil () 0)
+         (o> (progn
+               (decf test-calls-left)
+               (< *flow-value* iterations))
            (-> nil (value)
-             (setf result value)
-             (mt:open-latch latch)))))
+             (1+ value)))
+         (-> nil (value)
+           (setf result value)
+           (mt:open-latch latch)))))
     (5am:is (= iterations result))
     (5am:is (= test-calls-left 0))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test complex-flow
+  (let ((result (list)))
+    (flet ((put (v)
+             (push v result)))
+      (mt:wait-with-latch (latch)
+        (run-it
+         (>>
+           (-> :g ()
+             (put 0)
+             1)
+           (~> (-> :g (a)
+                 (+ 1 a))
+             (list nil)
+             (-> :g (a)
+               (+ a 2))
+             (>> (-> :g (b)
+                   (+ b 6))
+               (-> :g (b)
+                 (+ b 7)))
+             (list (-> :g (a)
+                     (+ a 3))
+                   (-> :g (a)
+                     (+ a 4))
+                   (-> :g (a)
+                     (values (+ a 5) -1))))
+           (-> :g ((a (n) b c (d e f)))
+             (put (list a n b c d e f)))
+           (list (-> :g () 3)
+                 (parallel-flow)
+                 (-> :g (r)
+                   (put r)))
+           (flow:serially
+             (-> :g () 1)
+             (serial-flow)
+             (-> :g (a)
+               (put a)))
+           (-> :g ()
+             (mt:open-latch latch))))))
+    (5am:is (equal '(0 (2 nil 3 14 4 5 6) ((3 4 5)) 6) (nreverse result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
