@@ -55,7 +55,7 @@
 
 (defmacro concurrently (&body flow)
   "Executes child elements in parallel, returning a list of results for child
-blocks or flows in the same order they were specified. Consing."
+blocks or flows in the same order they were specified. Heavy consing."
   (flow-lambda-macro (flow-context)
     `(dispatch-concurrently ,flow-context (list ,@flow))))
 
