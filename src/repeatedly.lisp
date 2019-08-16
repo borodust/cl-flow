@@ -14,7 +14,7 @@
                      (funcall test-fu))
                (push-flow-stack flow-context #'%push-repeated-flow)
                (push-flow-stack flow-context flow))
-             (continue-dispatch flow-context)))
+             (dispatch-rest flow-context)))
     (%push-repeated-flow flow-context)))
 
 
@@ -23,9 +23,10 @@
 in loop until LIVE-TEST-FORM evaluates to NIL. Result from the last iteration
 will be passed to the next block. Non-consing."
   (with-gensyms (test-fu)
-    (flow-lambda-macro (flow-context)
-      `(flet ((,test-fu () ,live-test-form))
-         (dispatch-repeatedly ,flow-context #',test-fu (list ,@flow))))))
+    (with-flow-let-macro (flow-list flow)
+      (flow-lambda-macro (flow-context)
+        `(flet ((,test-fu () ,live-test-form))
+           (dispatch-repeatedly ,flow-context #',test-fu ,flow-list))))))
 
 
 (defmacro o> (condition &body body)

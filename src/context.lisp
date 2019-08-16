@@ -16,8 +16,6 @@
    :type t)
   (function nil
    :type (or null (function (*) *)))
-  (lambda nil
-    :type (or null (function (flow-context) *)))
   (stack (make-array +min-stack-extension+ :element-type 'list :initial-element nil
                                            :fill-pointer 0 :adjustable t)
    :type array
@@ -32,15 +30,18 @@
   (apply (flow-context-dispatcher context) invariant args))
 
 
-(defun continue-dispatch (context)
+(defun dispatch-rest (context)
+  (declare (type flow-context context)
+           #.+optimize-form+)
   (cond
     ((eq *current-context* context) (setf *continue* t))
     ((eq *parent-context* context)
-     ;; see catch in #'dispatch-rest:
+     ;; see catch in #'%dispatch-rest:
      ;; this is to unwind a stack
      ;; to avoid overflowing it
+     ;; in case of single-threaded dispatch
      (throw *parent-context* t))
-    (t (dispatch-rest context))))
+    (t (%dispatch-rest context))))
 
 
 (defun make-child-flow-context (parent-context)
@@ -50,7 +51,7 @@
                       :parent parent-context)))
 
 
-(defun dispatch-rest (flow-context)
+(defun %dispatch-rest (flow-context)
   (declare (type flow-context flow-context)
            #.+optimize-form+)
   (let ((*parent-context* *current-context*)
@@ -168,7 +169,7 @@
                (%invoke-with-restarts fu arg)
              (cond
                (flow (push-flow-stack flow-context flow)
-                     (continue-dispatch flow-context)
+                     (dispatch-rest flow-context)
                      (return))
                ((not looping-p) (return result))))))
 
@@ -177,7 +178,7 @@
   (capture-flow-value context (invoke-with-restarts context
                                                     (flow-context-function context)
                                                     (flow-context-value context)))
-  (continue-dispatch context))
+  (dispatch-rest context))
 
 
 (defun init-context-dispatcher (context)

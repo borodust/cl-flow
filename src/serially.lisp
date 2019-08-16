@@ -13,8 +13,9 @@
 (defmacro serially (&body flow)
   "Executes child elements serially (but possibly in different threads)
 returning a value of the last atomic block or flow. Non-consing."
-  (flow-lambda-macro (flow-context)
-    `(dispatch-serially ,flow-context (list ,@flow))))
+  (with-flow-let-macro (flow-list flow)
+    (flow-lambda-macro (flow-context)
+      `(dispatch-serially ,flow-context ,flow-list))))
 
 
 (defmacro >> (&rest flow)

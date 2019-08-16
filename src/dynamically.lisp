@@ -8,7 +8,7 @@
   (declare (type (function (*) *) body-fu)
            #.+optimize-form+)
   (push-flow-stack flow-context (funcall body-fu (flow-context-value flow-context)))
-  (continue-dispatch flow-context))
+  (dispatch-rest flow-context))
 
 
 (defmacro dynamically (lambda-list &body body)

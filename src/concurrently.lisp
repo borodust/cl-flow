@@ -4,7 +4,6 @@
 ;;;
 ;;; CONCURRENTLY
 ;;;
-
 (defun %dispatch-concurrently (parent-context flow)
   (declare (type list flow)
            (type flow-context parent-context)
@@ -21,7 +20,7 @@
       (labels ((%countdown ()
                  (when (= (mt:decrement-atomic-counter counter) 0)
                    (capture-flow-value parent-context results)
-                   (continue-dispatch parent-context)))
+                   (dispatch-rest parent-context)))
                (%make-context (child-flow cell)
                  (flet ((%capture-result (child-context)
                           (setf (car cell) (flow-context-value child-context))
@@ -50,14 +49,15 @@
            #.+optimize-form+)
   (if flow
       (%dispatch-concurrently parent-context flow)
-      (continue-dispatch parent-context)))
+      (dispatch-rest parent-context)))
 
 
 (defmacro concurrently (&body flow)
   "Executes child elements in parallel, returning a list of results for child
 blocks or flows in the same order they were specified. Heavy consing."
-  (flow-lambda-macro (flow-context)
-    `(dispatch-concurrently ,flow-context (list ,@flow))))
+  (with-flow-let-macro (flow-list flow)
+    (flow-lambda-macro (flow-context)
+      `(dispatch-concurrently ,flow-context ,flow-list))))
 
 
 (defmacro ~> (&rest body)

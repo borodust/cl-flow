@@ -44,3 +44,9 @@
   `(with-gensyms (,fu-name)
      `(%with-flow-function (,,fu-name ,,fu-lambda-list ,@,fu-body)
         ,,@body)))
+
+
+(defmacro with-flow-let-macro ((var flow) &body body)
+  `(with-gensyms (,var)
+     `(let ((,,var (list ,@,flow)))
+        ,,@body)))

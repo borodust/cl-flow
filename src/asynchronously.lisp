@@ -26,7 +26,7 @@
     (flow-lambda-macro (flow-context)
       (let ((fu-body `((flet ((continue-flow (&optional ,continue-arg)
                                 (capture-flow-value ,flow-context ,continue-arg)
-                                (continue-dispatch ,flow-context))
+                                (dispatch-rest ,flow-context))
                               (interrupt-flow (&optional ,condi)
                                 (error ,condi)))
                          (declare (ignorable (function continue-flow)

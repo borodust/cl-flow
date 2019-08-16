@@ -20,3 +20,12 @@
   (let ((dispatcher (simple-flow-dispatcher:make-simple-dispatcher :threads 4
                                                                    :invoker #'invoke)))
     (run dispatcher flow)))
+
+
+(defun dispatch-immediately (task invariant &key &allow-other-keys)
+  (declare (ignore invariant))
+  (funcall task))
+
+
+(defun run-it-immediately (flow)
+  (run #'dispatch-immediately flow))

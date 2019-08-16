@@ -1,8 +1,8 @@
 (cl:in-package :cl-flow.tests)
 
-(5am:def-suite :cl-flow-suite)
+(5am:def-suite :cl-flow.tests)
 
-(5am:in-suite :cl-flow-suite)
+(5am:in-suite :cl-flow.tests)
 
 
 (defun serial-flow ()
@@ -19,21 +19,6 @@
                         (declare (type fixnum a))
                         (the fixnum (+ a i)))))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(5am:test simple-example
-  (let ((result ""))
-    (mt:wait-with-latch (latch)
-      (run-it
-       (>> (~> (flow:atomically :tag-0 () "Hello")
-               (-> :tag-1 () ", concurrent"))
-           (-> :tag-2 ((a b))
-             (concatenate 'string a b " World!"))
-           (-> :tag-3 (text)
-             (setf result text)
-             (mt:open-latch latch)))))
-    (5am:is (equal "Hello, concurrent World!" result))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -225,6 +210,39 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(5am:test stack-overflowing
+  (let ((counter 100000))
+    (run-it-immediately
+     (repeatedly (> counter 0)
+       (serially
+         (atomically nil ()
+           (decf counter)))
+       (concurrently ()
+         (atomically nil ()
+           (symbol-name 'this))
+         (atomically nil ()
+           (symbol-name 'is))
+         (atomically nil ()
+           (symbol-name 'meh)))))
+    (5am:pass)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(5am:test simple-example
+  (let ((result ""))
+    (mt:wait-with-latch (latch)
+      (run-it
+       (>> (~> (flow:atomically :tag-0 () "Hello")
+               (-> :tag-1 () ", concurrent"))
+           (-> :tag-2 ((a b))
+             (concatenate 'string a b " World!"))
+           (-> :tag-3 (text)
+             (setf result text)
+             (mt:open-latch latch)))))
+    (5am:is (equal "Hello, concurrent World!" result))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (5am:test complex-flow
   (let ((result (list)))
     (flet ((put (v)
@@ -232,37 +250,35 @@
       (mt:wait-with-latch (latch)
         (run-it
          (>>
-           (-> :g ()
-             (put 0)
-             1)
-           (~> (-> :g (a)
-                 (+ 1 a))
-             (list nil)
-             (-> :g (a)
-               (+ a 2))
-             (>> (-> :g (b)
-                   (+ b 6))
-               (-> :g (b)
-                 (+ b 7)))
-             (list (-> :g (a)
-                     (+ a 3))
-                   (-> :g (a)
-                     (+ a 4))
-                   (-> :g (a)
-                     (values (+ a 5) -1))))
-           (-> :g ((a (n) b c (d e f)))
-             (put (list a n b c d e f)))
-           (list (-> :g () 3)
-                 (parallel-flow)
-                 (-> :g (r)
-                   (put r)))
-           (flow:serially
-             (-> :g () 1)
-             (serial-flow)
-             (-> :g (a)
-               (put a)))
-           (-> :g ()
-             (mt:open-latch latch))))))
+          (-> :g ()
+            (put 0)
+            1)
+          (~> (-> :g (a)
+                (+ 1 a))
+              (list nil)
+              (-> :g (a)
+                (+ a 2))
+              (>> (-> :g (b)
+                    (+ b 6))
+                  (-> :g (b)
+                    (+ b 7)))
+              (list (-> :g (a)
+                      (+ a 3))
+                    (-> :g (a)
+                      (+ a 4))
+                    (-> :g (a)
+                      (values (+ a 5) -1))))
+          (-> :g ((a (n) b c (d e f)))
+            (put (list a n b c d e f)))
+          (list (-> :g () 3)
+                (parallel-flow)
+                (-> :g (r)
+                  (put r)))
+          (flow:serially
+            (-> :g () 1)
+            (serial-flow)
+            (-> :g (a)
+              (put a)))
+          (-> :g ()
+            (mt:open-latch latch))))))
     (5am:is (equal '(0 (2 nil 3 14 4 5 6) ((3 4 5)) 6) (nreverse result)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
