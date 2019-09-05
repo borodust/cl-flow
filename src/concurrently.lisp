@@ -13,7 +13,7 @@
                    if (and node (listp node))
                      summing (%leaf-count node) into result
                    else
-                     counting t into result
+                     summing 1 into result
                    finally (return result))))
     (let* ((results (copy-tree flow))
            (counter (mt:make-atomic-counter (%leaf-count results))))
