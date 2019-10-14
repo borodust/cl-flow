@@ -20,7 +20,9 @@
                                            :fill-pointer 0 :adjustable t)
    :type array
    :read-only t)
-  (parent nil :read-only t))
+  (parent nil
+   :type (or null flow-context)
+   :read-only t))
 
 
 (defun dispatch (context task invariant &rest args &key &allow-other-keys)
@@ -187,15 +189,3 @@
                (apply dispatcher #'%invoke invariant args)))
       (setf (flow-context-dispatcher context) #'%dispatcher)))
   context)
-
-
-(defun run (dispatcher flow)
-  "Dispatcher must be a function with lambda-list congruent to (task arg
-invariant &key &allow-other-keys)"
-  (declare (type (function ((function () *) * &rest * &key &allow-other-keys) *)
-                 dispatcher)
-           (type (or list function) flow)
-           #.+optimize-form+)
-  (let ((context (make-flow-context :native-dispatcher dispatcher)))
-    (init-context-dispatcher context)
-    (dispatch-serially context (ensure-list flow))))

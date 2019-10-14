@@ -16,7 +16,8 @@
                (:file "concurrently")
                (:file "dynamically")
                (:file "asynchronously")
-               (:file "repeatedly")))
+               (:file "repeatedly")
+               (:file "run")))
 
 
 (asdf:defsystem cl-flow/tests
