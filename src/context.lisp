@@ -20,9 +20,7 @@
                                            :fill-pointer 0 :adjustable t)
    :type array
    :read-only t)
-  (parent nil
-   :type (or null flow-context)
-   :read-only t))
+  (parent nil :read-only t))
 
 
 (defun dispatch (context task invariant &rest args &key &allow-other-keys)
