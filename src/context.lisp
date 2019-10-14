@@ -8,14 +8,14 @@
 
 (defstruct flow-context
   (native-dispatcher nil
-   :type (function (function * &rest * &key &allow-other-keys) *)
+   :type (or null function)
    :read-only t)
   (dispatcher nil
-   :type (or null (function (* &rest * &key &allow-other-keys))))
+   :type (or null function))
   (value nil
    :type t)
   (function nil
-   :type (or null (function (*) *)))
+   :type (or null function))
   (stack (make-array +min-stack-extension+ :element-type 'list :initial-element nil
                                            :fill-pointer 0 :adjustable t)
    :type array
