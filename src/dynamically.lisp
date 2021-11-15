@@ -5,7 +5,7 @@
 ;;; DYNAMICALLY
 ;;;
 (defun dispatch-dynamically (flow-context body-fu)
-  (declare (type (function (*) *) body-fu)
+  (declare (type (function (t) *) body-fu)
            #.+optimize-form+)
   (push-flow-stack flow-context (funcall body-fu (flow-context-value flow-context)))
   (dispatch-rest flow-context))

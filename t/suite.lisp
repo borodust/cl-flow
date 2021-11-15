@@ -129,11 +129,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (5am:test non-concurrent-flow
-  (let ((value 0))
+  (let ((ref (mt:make-guarded-reference 0)))
     (flet ((increment ()
-             (let ((v value))
+             (let ((v (mt:guarded-value-of ref)))
                (sleep 0.05)
-               (setf value (1+ v)))))
+               (setf (mt:guarded-value-of ref) (1+ v)))))
       (mt:wait-with-latch (latch)
         (run-it
          (>> (~> (-> :one ()
@@ -144,7 +144,7 @@
                    (increment)))
              (-> :p ()
                (mt:open-latch latch))))))
-    (5am:is (= 3 value))))
+    (5am:is (= 3 (mt:guarded-value-of ref)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

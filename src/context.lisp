@@ -146,7 +146,7 @@
   (format stream "Inject flow to run instead of current block"))
 
 (defun %invoke-with-restarts (fu arg)
-  (declare (type (function (*) *) fu)
+  (declare (type (function (t) *) fu)
            #.+optimize-form+)
   ;; catch+restart-bind insead of tagbody+restart-case to avoid any consing
   (catch 'begin
@@ -162,7 +162,7 @@
 
 
 (defun invoke-with-restarts (flow-context fu arg)
-  (declare (type (function (*) *) fu)
+  (declare (type (function (t) *) fu)
            #.+optimize-form+)
   ;; loop instead tagbody to avoid any consing
   (loop do (multiple-value-bind (result looping-p flow)

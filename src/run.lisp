@@ -3,7 +3,7 @@
 (defun run (dispatcher flow)
   "Dispatcher must be a function with lambda-list congruent to (task arg
 invariant &key &allow-other-keys)"
-  (declare (type (function ((function () *) * &rest * &key &allow-other-keys) *)
+  (declare (type (function ((function () *) t &rest t &key &allow-other-keys) *)
                  dispatcher)
            (type (or list function) flow)
            #.+optimize-form+)
